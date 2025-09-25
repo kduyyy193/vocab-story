@@ -1,0 +1,7 @@
+{
+  "name": "Vocab Master",
+  "description": "A comprehensive English vocabulary learning application to help users master 2000 essential words through interactive flashcards, spaced repetition, exercises, and an IPA chart.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

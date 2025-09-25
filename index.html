@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vocab Master</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              'primary': '#0891b2',
+              'primary-hover': '#0e7490',
+              'secondary': '#475569',
+              'secondary-hover': '#64748b',
+              'success': '#16a34a',
+              'warning': '#f97316',
+              'danger': '#dc2626',
+              'light': '#f1f5f9',
+              'dark': {
+                'bg': '#0f172a',
+                'card': '#1e293b',
+                'border': '#334155',
+                'text': '#e2e8f0',
+                'text-secondary': '#94a3b8'
+              }
+            },
+            animation: {
+              'flip': 'flip 0.6s ease-in-out',
+              'fade-in': 'fadeIn 0.5s ease-in-out'
+            },
+            keyframes: {
+              flip: {
+                '0%': { transform: 'rotateY(0deg)' },
+                '100%': { transform: 'rotateY(180deg)' },
+              },
+              fadeIn: {
+                '0%': { opacity: 0 },
+                '100%': { opacity: 1 },
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.min.js"></script>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.1.1/",
+    "react": "https://aistudiocdn.com/react@^19.1.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+    "@google/genai": "https://esm.run/@google/genai"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-light dark:bg-dark-bg">
+    <div id="root"></div>
+    <!-- Firebase SDKs -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+      import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+      import { getFirestore, collection, onSnapshot, addDoc, doc, setDoc, getDoc, writeBatch, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+      window.firebase = {
+        app: { initializeApp },
+        auth: { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged },
+        firestore: { getFirestore, collection, onSnapshot, addDoc, doc, setDoc, getDoc, writeBatch, query, where },
+      };
+    </script>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
