@@ -28,6 +28,7 @@ interface VocabularyContextType {
     getWordsToReview: () => Word[];
     addWord: (newWord: NewWord) => Promise<void>;
     updateWordProgress: (wordId: string, action: ReviewAction) => void;
+    updateWordsProgress: (wordId: string[], action: ReviewAction) => void;
     markAsMastered: (wordId: string) => void;
     stats: {
         total: number;
@@ -45,7 +46,7 @@ const getInitialSettings = (): AppSettings => {
     const defaultSettings: AppSettings = { theme: 'dark', defaultVoice: PronunciationVoice.UK, speechSpeed: 1 };
     try {
         const savedSettings = localStorage.getItem(LOCAL_STORAGE_SETTINGS_KEY);
-         if (savedSettings) {
+        if (savedSettings) {
             return { ...defaultSettings, ...JSON.parse(savedSettings) };
         }
     } catch (error) {
@@ -72,7 +73,7 @@ export const VocabularyProvider: React.FC<VocabularyProviderProps> = ({ children
             try {
                 const savedProgress = localStorage.getItem(guestProgressKey);
                 let initialProgress = savedProgress ? JSON.parse(savedProgress) : {};
-                 
+
                 // Ensure progress exists for all sample words
                 sampleVocabulary.forEach(word => {
                     if (!initialProgress[word.id]) {
@@ -140,7 +141,7 @@ export const VocabularyProvider: React.FC<VocabularyProviderProps> = ({ children
                 hasChanged = true;
             }
         });
-        
+
         // This could be expensive if run on every progress change, but necessary to clean up deleted words
         Object.keys(newProgress).forEach(wordId => {
             if (!words.some(w => w.id === wordId)) {
@@ -166,7 +167,7 @@ export const VocabularyProvider: React.FC<VocabularyProviderProps> = ({ children
             console.error("Failed to save to localStorage", error);
         }
     }, [settings, progress, isGuest]);
-    
+
     const updateProgressInFirestore = async (newProgress: Record<string, WordProgress>) => {
         if (!user || initializationError) return;
         const progressDocRef = doc(db, "users", user.uid, "progress", "main");
@@ -176,7 +177,7 @@ export const VocabularyProvider: React.FC<VocabularyProviderProps> = ({ children
             console.error("Failed to update progress in Firestore:", error);
         }
     };
-    
+
     const addWord = async (newWord: NewWord) => {
         if (isGuest) {
             throw new Error("Guests cannot add new words. Please sign up to save your vocabulary.");
@@ -193,8 +194,8 @@ export const VocabularyProvider: React.FC<VocabularyProviderProps> = ({ children
         }
     };
 
-    const getWordsToLearn = () => words.filter(word => !progress[word.id] || progress[word.id]?.status === LearningStatus.NotLearned);
-    
+    const getWordsToLearn = () => words.filter(word => !progress[word.id] || progress[word.id]?.status === LearningStatus.NotLearned || progress[word.id]?.status === LearningStatus.Learning);
+
     const getWordsToReview = () => {
         const today = new Date().toISOString().split('T')[0];
         return words.filter(word => {
@@ -202,7 +203,7 @@ export const VocabularyProvider: React.FC<VocabularyProviderProps> = ({ children
             return wordProgress?.status === LearningStatus.Learning && wordProgress.nextReviewDate && wordProgress.nextReviewDate <= today;
         });
     };
-    
+
     const addDays = (date: Date, days: number): Date => {
         const result = new Date(date);
         result.setDate(result.getDate() + days);
@@ -215,7 +216,7 @@ export const VocabularyProvider: React.FC<VocabularyProviderProps> = ({ children
         let newStage = current.stage;
         let newStatus = LearningStatus.Learning;
 
-        switch(action) {
+        switch (action) {
             case ReviewAction.Again: newStage = 0; break;
             case ReviewAction.Hard: newStage = Math.max(0, current.stage - 1); break;
             case ReviewAction.Good: newStage = current.status === LearningStatus.NotLearned ? 0 : current.stage + 1; break;
@@ -230,10 +231,46 @@ export const VocabularyProvider: React.FC<VocabularyProviderProps> = ({ children
             const nextReviewDate = addDays(new Date(), reviewInterval).toISOString().split('T')[0];
             updatedProgress[wordId] = { status: newStatus, nextReviewDate, stage: newStage };
         }
-        
+
         setProgress(updatedProgress);
         if (user) {
             updateProgressInFirestore(updatedProgress);
+        }
+    };
+
+    const updateWordsProgress = (wordIds: string[], action: ReviewAction) => {
+        const updatedProgress = { ...progress };
+        let hasChanged = false;
+
+        wordIds.forEach(wordId => {
+            const current = updatedProgress[wordId] || { status: LearningStatus.NotLearned, stage: 0, nextReviewDate: null };
+            let newStage = current.stage;
+            let newStatus = LearningStatus.Learning;
+
+            switch (action) {
+                case ReviewAction.Again: newStage = 0; break;
+                case ReviewAction.Hard: newStage = Math.max(0, current.stage - 1); break;
+                case ReviewAction.Good: newStage = current.status === LearningStatus.NotLearned ? 0 : current.stage + 1; break;
+                case ReviewAction.Easy: newStage = current.status === LearningStatus.NotLearned ? 1 : current.stage + 2; break;
+            }
+
+            if (newStage >= SRS_STAGES.length) {
+                newStatus = LearningStatus.Mastered;
+                updatedProgress[wordId] = { ...current, status: newStatus, nextReviewDate: null, stage: newStage };
+            } else {
+                const reviewInterval = SRS_STAGES[newStage];
+                const nextReviewDate = addDays(new Date(), reviewInterval).toISOString().split('T')[0];
+                updatedProgress[wordId] = { status: newStatus, nextReviewDate, stage: newStage };
+            }
+
+            hasChanged = true;
+        });
+
+        if (hasChanged) {
+            setProgress(updatedProgress);
+            if (user) {
+                updateProgressInFirestore(updatedProgress);
+            }
         }
     };
 
@@ -245,11 +282,11 @@ export const VocabularyProvider: React.FC<VocabularyProviderProps> = ({ children
             updateProgressInFirestore(updatedProgress);
         }
     };
-    
+
     const updateSettings = (newSettings: Partial<AppSettings>) => {
-        setSettings(prev => ({...prev, ...newSettings}));
+        setSettings(prev => ({ ...prev, ...newSettings }));
     };
-    
+
     const resetProgress = async () => {
         const initialProgress: Record<string, WordProgress> = {};
         words.forEach(word => {
@@ -269,12 +306,12 @@ export const VocabularyProvider: React.FC<VocabularyProviderProps> = ({ children
     const stats = {
         total: words.length,
         notLearned: words.filter(w => !progress[w.id] || progress[w.id].status === LearningStatus.NotLearned).length,
-        learning: Object.values(progress as WordProgress[]).filter(p => p.status  === LearningStatus.Learning).length,
+        learning: Object.values(progress as WordProgress[]).filter(p => p.status === LearningStatus.Learning).length,
         mastered: Object.values(progress as WordProgress[]).filter(p => p.status === LearningStatus.Mastered).length,
     };
 
     return (
-        <VocabularyContext.Provider value={{ words, progress, stats, loading, initializationError, getWordsToLearn, getWordsToReview, addWord, updateWordProgress, markAsMastered, settings, updateSettings, resetProgress }}>
+        <VocabularyContext.Provider value={{ words, progress, stats, loading, initializationError, getWordsToLearn, getWordsToReview, addWord, updateWordProgress, updateWordsProgress, markAsMastered, settings, updateSettings, resetProgress }}>
             {children}
         </VocabularyContext.Provider>
     );
