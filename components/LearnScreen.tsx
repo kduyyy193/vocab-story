@@ -19,7 +19,7 @@ const LearnScreen: React.FC = () => {
             }
             return shuffled.slice(0, count);
         }
-        setWordsToLearn(getRandomItems(getWordsToLearn(), 10));; // Learn in batches of 10
+        setWordsToLearn(getRandomItems(getWordsToLearn(), 10)); // Learn in batches of 10
         setCurrentIndex(0);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
