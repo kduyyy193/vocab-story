@@ -11,7 +11,15 @@ const LearnScreen: React.FC = () => {
     const [currentIndex, setCurrentIndex] = useState(0);
 
     useEffect(() => {
-        setWordsToLearn(getWordsToLearn().slice(0, 10)); // Learn in batches of 10
+        function getRandomItems(arr: any[], count: number) {
+            const shuffled = [...arr];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled.slice(0, count);
+        }
+        setWordsToLearn(getRandomItems(getWordsToLearn(), 10));; // Learn in batches of 10
         setCurrentIndex(0);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -27,11 +35,11 @@ const LearnScreen: React.FC = () => {
             setCurrentIndex(0);
         }
     };
-    
+
     const handleMastered = () => {
         if (currentIndex >= wordsToLearn.length) return;
         markAsMastered(wordsToLearn[currentIndex].id);
-         if (currentIndex < wordsToLearn.length - 1) {
+        if (currentIndex < wordsToLearn.length - 1) {
             setCurrentIndex(currentIndex + 1);
         } else {
             setWordsToLearn(getWordsToLearn().slice(0, 10));
@@ -47,7 +55,7 @@ const LearnScreen: React.FC = () => {
             </div>
         );
     }
-    
+
     const currentWord = wordsToLearn[currentIndex];
 
     return (
@@ -55,14 +63,14 @@ const LearnScreen: React.FC = () => {
             <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-dark-text">Learn New Words ({currentIndex + 1}/{wordsToLearn.length})</h2>
             <Flashcard key={currentWord.id} word={currentWord} />
             <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-4">
-                 <button onClick={() => handleNextWord(ReviewAction.Again)} className="w-full sm:w-auto px-6 py-3 bg-danger text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition-colors duration-300">
+                <button onClick={() => handleNextWord(ReviewAction.Again)} className="w-full sm:w-auto px-6 py-3 bg-danger text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition-colors duration-300">
                     Needs Review
                 </button>
                 <button onClick={() => handleNextWord(ReviewAction.Good)} className="w-full sm:w-auto px-6 py-3 bg-success text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition-colors duration-300">
                     Got It!
                 </button>
                 <button onClick={handleMastered} className="w-full sm:w-auto px-6 py-3 bg-primary text-white font-semibold rounded-lg shadow-md hover:bg-primary-hover transition-colors duration-300">
-                   Already Know
+                    Already Know
                 </button>
             </div>
         </div>
